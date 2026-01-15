@@ -35,10 +35,11 @@ public class DespesaService {
     }
 
     public List<DespesaDTO> getAllDespesas() {
-        return despesaRepository.findAll()
+        List<DespesaDTO> despesas = despesaRepository.findAll()
                 .stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
+        return despesas;
     }
 
     public DespesaDTO getDespesaById(Long id) {

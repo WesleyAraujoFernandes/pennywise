@@ -2,6 +2,7 @@ package br.com.knowledge.pennywise.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -11,6 +12,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import jakarta.servlet.http.HttpServletResponse;
 
 @Configuration
 @EnableMethodSecurity
@@ -30,7 +33,22 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll()
+                        /* ENTRADAS */
+                        .requestMatchers(HttpMethod.POST, "/api/entradas/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/entradas/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/entradas/**").hasRole("ADMIN")
+                        /* DESPESAS */
+                        .requestMatchers(HttpMethod.POST, "/api/despesas/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/despesas/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/despesas/**").hasRole("ADMIN")
+
                         .anyRequest().authenticated())
+                .exceptionHandling(ex -> ex.authenticationEntryPoint((request, response, authException) -> {
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
+                })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Forbidden");
+                        }))
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class);
