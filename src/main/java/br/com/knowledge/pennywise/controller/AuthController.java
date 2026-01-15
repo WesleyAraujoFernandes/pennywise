@@ -1,6 +1,8 @@
 package br.com.knowledge.pennywise.controller;
 
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.boot.autoconfigure.data.redis.RedisProperties.Lettuce.Cluster.Refresh;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -11,46 +13,68 @@ import org.springframework.web.bind.annotation.RestController;
 
 import br.com.knowledge.pennywise.domain.dto.LoginRequest;
 import br.com.knowledge.pennywise.domain.dto.LoginResponse;
+import br.com.knowledge.pennywise.domain.dto.RefreshTokenRequest;
+import br.com.knowledge.pennywise.domain.user.User;
+import br.com.knowledge.pennywise.model.RefreshToken;
+import br.com.knowledge.pennywise.repository.UserRepository;
 import br.com.knowledge.pennywise.security.JwtService;
+import br.com.knowledge.pennywise.service.RefreshTokenService;
 import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
 
-    private final AuthenticationManager authenticationManager;
-    private final JwtService jwtService;
+        private final AuthenticationManager authenticationManager;
+        private final JwtService jwtService;
+        private final RefreshTokenService refreshTokenService;
+        private final UserRepository userRepository;
 
-    public AuthController(AuthenticationManager authenticationManager,
-            JwtService jwtService) {
-        this.authenticationManager = authenticationManager;
-        this.jwtService = jwtService;
-    }
+        public AuthController(AuthenticationManager authenticationManager,
+                        JwtService jwtService, UserRepository userRepository, RefreshTokenService refreshTokenService) {
+                this.authenticationManager = authenticationManager;
+                this.jwtService = jwtService;
+                this.refreshTokenService = refreshTokenService;
+                this.userRepository = userRepository;
+        }
 
-    @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(
-            @Valid @RequestBody LoginRequest request) {
+        @PostMapping("/login")
+        public ResponseEntity<LoginResponse> login(
+                        @Valid @RequestBody LoginRequest request) {
 
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.email(),
-                        request.password()));
+                Authentication authentication = authenticationManager.authenticate(
+                                new UsernamePasswordAuthenticationToken(
+                                                request.email(),
+                                                request.password()));
+                UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+                User user = userRepository.findByEmail(userDetails.getUsername()).orElseThrow();
+                String accessToken = jwtService.generateToken(userDetails);
+                RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
 
-        String token = jwtService.generateToken(
-                (org.springframework.security.core.userdetails.UserDetails) authentication.getPrincipal());
+                String role = userDetails.getAuthorities()
+                                .stream()
+                                .findFirst()
+                                .map(a -> a.getAuthority())
+                                .orElse("ROLE_USER");
 
-        var userDetails = (org.springframework.security.core.userdetails.UserDetails) authentication.getPrincipal();
+                return ResponseEntity.ok(
+                                new LoginResponse(
+                                                accessToken,
+                                                refreshToken.getToken(),
+                                                user.getUsername(),
+                                                role));
+        }
 
-        String role = userDetails.getAuthorities()
-                .stream()
-                .findFirst()
-                .map(a -> a.getAuthority())
-                .orElse("ROLE_USER");
-
-        return ResponseEntity.ok(
-                new LoginResponse(
-                        token,
-                        userDetails.getUsername(),
-                        role));
-    }
+        @PostMapping("/refresh")
+        public ResponseEntity<LoginResponse> refresh(@RequestBody RefreshTokenRequest request) {
+                RefreshToken refreshToken = refreshTokenService.validate(request.refreshToken());
+                User user = refreshToken.getUser();
+                String accessToken = jwtService.generateToken(user);
+                return ResponseEntity.ok(
+                                new LoginResponse(
+                                                accessToken,
+                                                refreshToken.getToken(),
+                                                user.getUsername(),
+                                                user.getRole().name()));
+        }
 }
