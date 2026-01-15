@@ -21,7 +21,7 @@ public class DespesaDTO {
 
     private Long id;
     @NotBlank(message = "Descrição é obrigatória")
-    @Size(max = 255, message = "Descrição não pode ter mais de 255 caracteres")
+    @Size(max = 255, message = "Descrição não deve ter mais de 255 caracteres")
     private String descricao;
     @NotNull(message = "Valor é obrigatório")
     @DecimalMin(value = "0.0", inclusive = false, message = "Valor deve ser maior que zero")
