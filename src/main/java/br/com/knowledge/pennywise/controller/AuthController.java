@@ -2,6 +2,7 @@ package br.com.knowledge.pennywise.controller;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.boot.autoconfigure.data.redis.RedisProperties.Lettuce.Cluster.Refresh;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -16,6 +17,7 @@ import br.com.knowledge.pennywise.domain.dto.LoginResponse;
 import br.com.knowledge.pennywise.domain.dto.RefreshTokenRequest;
 import br.com.knowledge.pennywise.domain.user.User;
 import br.com.knowledge.pennywise.model.RefreshToken;
+import br.com.knowledge.pennywise.repository.RefreshTokenRepository;
 import br.com.knowledge.pennywise.repository.UserRepository;
 import br.com.knowledge.pennywise.security.JwtService;
 import br.com.knowledge.pennywise.service.RefreshTokenService;
@@ -28,14 +30,17 @@ public class AuthController {
         private final AuthenticationManager authenticationManager;
         private final JwtService jwtService;
         private final RefreshTokenService refreshTokenService;
+        private final RefreshTokenRepository refreshTokenRepository;
         private final UserRepository userRepository;
 
         public AuthController(AuthenticationManager authenticationManager,
-                        JwtService jwtService, UserRepository userRepository, RefreshTokenService refreshTokenService) {
+                        JwtService jwtService, UserRepository userRepository, RefreshTokenService refreshTokenService,
+                        RefreshTokenRepository refreshTokenRepository) {
                 this.authenticationManager = authenticationManager;
                 this.jwtService = jwtService;
                 this.refreshTokenService = refreshTokenService;
                 this.userRepository = userRepository;
+                this.refreshTokenRepository = refreshTokenRepository;
         }
 
         @PostMapping("/login")
@@ -76,5 +81,20 @@ public class AuthController {
                                                 refreshToken.getToken(),
                                                 user.getUsername(),
                                                 user.getRole().name()));
+        }
+
+        @PostMapping
+        public ResponseEntity<Void> logout(
+                        @RequestBody RefreshTokenRequest request) {
+
+                RefreshToken refreshToken = refreshTokenRepository
+                                .findByToken(request.refreshToken())
+                                .orElse(null);
+
+                if (refreshToken != null) {
+                        refreshTokenRepository.delete(refreshToken);
+                }
+
+                return ResponseEntity.noContent().build();
         }
 }

@@ -39,7 +39,8 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/auth/login", "auth/refresh").permitAll()
+                        .requestMatchers("/auth/logout").authenticated()
                         /* ENTRADAS */
                         .requestMatchers(HttpMethod.POST, "/api/entradas/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/entradas/**").hasRole("ADMIN")
@@ -48,7 +49,6 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/despesas/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/despesas/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/despesas/**").hasRole("ADMIN")
-
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex.authenticationEntryPoint((request, response, authException) -> {
                     response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
