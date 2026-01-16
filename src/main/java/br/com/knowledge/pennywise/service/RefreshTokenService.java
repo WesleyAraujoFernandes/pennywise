@@ -1,6 +1,5 @@
 package br.com.knowledge.pennywise.service;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
@@ -11,39 +10,43 @@ import org.springframework.transaction.annotation.Transactional;
 import br.com.knowledge.pennywise.domain.user.User;
 import br.com.knowledge.pennywise.model.RefreshToken;
 import br.com.knowledge.pennywise.repository.RefreshTokenRepository;
-import br.com.knowledge.pennywise.repository.UserRepository;
 
 @Service
 @Transactional
 public class RefreshTokenService {
 
     private final RefreshTokenRepository repository;
-    private final UserRepository userRepository;
 
-    public RefreshTokenService(
-            RefreshTokenRepository repository,
-            UserRepository userRepository) {
+    public RefreshTokenService(RefreshTokenRepository repository) {
         this.repository = repository;
-        this.userRepository = userRepository;
     }
 
-    public void deleteByUserEmail(String email) {
-        repository.deleteByUserEmail(email);
-    }
+    public RefreshToken createRefreshToken(User user) {
 
-    public String createRefreshToken(String email) {
-
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+        // opcional: invalidar tokens antigos
+        repository.deleteByUser(user);
 
         RefreshToken token = new RefreshToken();
         token.setToken(UUID.randomUUID().toString());
         token.setUser(user);
         token.setExpiryDate(Instant.now().plus(30, ChronoUnit.DAYS));
 
-        repository.save(token);
-
-        return token.getToken();
+        return repository.save(token);
     }
 
+    public RefreshToken validate(String token) {
+        RefreshToken refreshToken = repository.findByToken(token)
+                .orElseThrow(() -> new RuntimeException("Refresh token inválido"));
+
+        if (refreshToken.getExpiryDate().isBefore(Instant.now())) {
+            repository.delete(refreshToken);
+            throw new RuntimeException("Refresh token expirado");
+        }
+
+        return refreshToken;
+    }
+
+    public void deleteByUser(User user) {
+        repository.deleteByUser(user);
+    }
 }
