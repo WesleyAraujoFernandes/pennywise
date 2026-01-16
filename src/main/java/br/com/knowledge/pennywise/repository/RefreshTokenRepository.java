@@ -18,4 +18,6 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
     void deleteByUserEmail(@Param("email") String email);
 
     void deleteByUser(User user);
+
+    void deleteAllByUserEmail(@Param("email") String email);
 }

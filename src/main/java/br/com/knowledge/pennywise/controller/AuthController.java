@@ -15,8 +15,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import br.com.knowledge.pennywise.domain.dto.LoginRequest;
 import br.com.knowledge.pennywise.domain.dto.LoginResponse;
+import br.com.knowledge.pennywise.domain.dto.RefreshTokenRequest;
 import br.com.knowledge.pennywise.domain.dto.TokenResponse;
 import br.com.knowledge.pennywise.domain.user.User;
+import br.com.knowledge.pennywise.exception.UnauthorizedException;
 import br.com.knowledge.pennywise.model.RefreshToken;
 import br.com.knowledge.pennywise.repository.RefreshTokenRepository;
 import br.com.knowledge.pennywise.repository.UserRepository;
@@ -34,6 +36,7 @@ public class AuthController {
         private final JwtService jwtService;
         private final RefreshTokenService refreshTokenService;
         private final UserRepository userRepository;
+        private final RefreshTokenRepository refreshTokenRepository;
 
         public AuthController(AuthenticationManager authenticationManager,
                         JwtService jwtService, UserRepository userRepository, RefreshTokenService refreshTokenService,
@@ -42,6 +45,7 @@ public class AuthController {
                 this.jwtService = jwtService;
                 this.refreshTokenService = refreshTokenService;
                 this.userRepository = userRepository;
+                this.refreshTokenRepository = refreshTokenRepository;
         }
 
         @PostMapping("/login")
@@ -74,16 +78,45 @@ public class AuthController {
                                                 role));
         }
 
+        /*
+         * @PostMapping("/refresh")
+         * public TokenResponse refresh(HttpServletRequest request) {
+         * 
+         * String refreshToken = CookieUtils.getRefreshToken(request);
+         * 
+         * RefreshToken rt = refreshTokenService.validate(refreshToken);
+         * 
+         * String newAccessToken = jwtService.generateAccessToken(rt.getUser());
+         * 
+         * return new TokenResponse(newAccessToken);
+         * }
+         */
         @PostMapping("/refresh")
-        public TokenResponse refresh(HttpServletRequest request) {
+        public ResponseEntity<LoginResponse> refresh(
+                        @RequestBody RefreshTokenRequest request) {
 
-                String refreshToken = CookieUtils.getRefreshToken(request);
+                RefreshToken oldToken = refreshTokenService.validate(request.refreshToken());
 
-                RefreshToken rt = refreshTokenService.validate(refreshToken);
+                if (oldToken.isRevoked()) {
+                        throw new UnauthorizedException("Refresh token reutilizado");
+                }
 
-                String newAccessToken = jwtService.generateAccessToken(rt.getUser());
+                // Revoga o token antigo
+                oldToken.setRevoked(true);
+                refreshTokenRepository.save(oldToken);
 
-                return new TokenResponse(newAccessToken);
+                // Gera novo refresh token
+                RefreshToken newToken = refreshTokenService.createRefreshToken(
+                                oldToken.getUser());
+
+                String accessToken = jwtService.generateAccessToken(oldToken.getUser());
+
+                return ResponseEntity.ok(
+                                new LoginResponse(
+                                                accessToken,
+                                                newToken.getToken(),
+                                                oldToken.getUser().getUsername(),
+                                                oldToken.getUser().getRole().name()));
         }
 
         @PostMapping("/logout")
@@ -98,6 +131,7 @@ public class AuthController {
                 ResponseCookie cookie = ResponseCookie.from("refreshToken", "")
                                 .httpOnly(true)
                                 .secure(true)
+                                .sameSite("Strict")
                                 .path("/auth/refresh")
                                 .maxAge(0)
                                 .build();
@@ -107,21 +141,4 @@ public class AuthController {
                                 .build();
         }
 
-        /*
-         * @PostMapping("/logout")
-         * public ResponseEntity<Void> logout(
-         * 
-         * @RequestBody RefreshTokenRequest request) {
-         * 
-         * RefreshToken refreshToken = refreshTokenRepository
-         * .findByToken(request.refreshToken())
-         * .orElse(null);
-         * 
-         * if (refreshToken != null) {
-         * refreshTokenRepository.delete(refreshToken);
-         * }
-         * 
-         * return ResponseEntity.noContent().build();
-         * }
-         */
 }

@@ -59,6 +59,19 @@ public class RefreshTokenService {
         return rt;
     }
 
+    @Transactional
+    public void revokeAllByRefreshToken(String refreshToken) {
+        RefreshToken token = repository
+                .findByToken(refreshToken)
+                .orElseThrow(() -> new UnauthorizedException("Refresh token inválido"));
+
+        repository.deleteAllByUserEmail(token.getUser().getUsername());
+    }
+
+    public void deleteByUsername(String username) {
+        repository.deleteByUserEmail(username);
+    }
+
     public void revoke(String token) {
         repository.findByToken(token).ifPresent(rt -> {
             rt.setRevoked(true);
