@@ -18,6 +18,7 @@ public class DespesaService {
 
     private final DespesaRepository despesaRepository;
 
+    @SuppressWarnings("null")
     public DespesaDTO createDespesa(DespesaDTO dto) {
         boolean exists = despesaRepository.existsByDescricaoAndData(dto.getDescricao(), dto.getData());
         if (exists) {
@@ -42,6 +43,7 @@ public class DespesaService {
         return despesas;
     }
 
+    @SuppressWarnings("null")
     public DespesaDTO getDespesaById(Long id) {
         return despesaRepository.findById(id)
                 .map(this::mapToDTO)
@@ -49,6 +51,7 @@ public class DespesaService {
     }
 
     public DespesaDTO updateDespesa(Long id, DespesaDTO dto) {
+        @SuppressWarnings("null")
         Despesa despesa = despesaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Despesa não encontrada"));
         despesa.setDescricao(dto.getDescricao());
@@ -59,6 +62,7 @@ public class DespesaService {
         return mapToDTO(updated);
     }
 
+    @SuppressWarnings("null")
     public void deleteDespesa(Long id) {
         despesaRepository.deleteById(id);
     }

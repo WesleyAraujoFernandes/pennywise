@@ -18,6 +18,7 @@ public class EntradaService {
 
     private final EntradaRepository entradaRepository;
 
+    @SuppressWarnings("null")
     public EntradaDTO createEntrada(EntradaDTO dto) {
         boolean exists = entradaRepository.existsByDescricaoAndData(dto.getDescricao(), dto.getData());
         if (exists) {
@@ -41,6 +42,7 @@ public class EntradaService {
                 .collect(Collectors.toList());
     }
 
+    @SuppressWarnings("null")
     public EntradaDTO getEntradaById(Long id) {
         return entradaRepository.findById(id)
                 .map(this::mapToDTO)
@@ -48,6 +50,7 @@ public class EntradaService {
     }
 
     public EntradaDTO updateEntrada(Long id, EntradaDTO dto) {
+        @SuppressWarnings("null")
         Entrada entrada = entradaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Entrada não encontrada"));
         entrada.setDescricao(dto.getDescricao());
@@ -58,6 +61,7 @@ public class EntradaService {
         return mapToDTO(updated);
     }
 
+    @SuppressWarnings("null")
     public void deleteEntrada(Long id) {
         entradaRepository.deleteById(id);
     }

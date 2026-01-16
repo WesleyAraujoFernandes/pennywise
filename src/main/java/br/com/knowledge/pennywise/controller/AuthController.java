@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.RestController;
 import br.com.knowledge.pennywise.domain.dto.LoginRequest;
 import br.com.knowledge.pennywise.domain.dto.LoginResponse;
 import br.com.knowledge.pennywise.domain.dto.RefreshTokenRequest;
-import br.com.knowledge.pennywise.domain.dto.TokenResponse;
 import br.com.knowledge.pennywise.domain.user.User;
 import br.com.knowledge.pennywise.exception.UnauthorizedException;
 import br.com.knowledge.pennywise.model.RefreshToken;
@@ -78,19 +77,6 @@ public class AuthController {
                                                 role));
         }
 
-        /*
-         * @PostMapping("/refresh")
-         * public TokenResponse refresh(HttpServletRequest request) {
-         * 
-         * String refreshToken = CookieUtils.getRefreshToken(request);
-         * 
-         * RefreshToken rt = refreshTokenService.validate(refreshToken);
-         * 
-         * String newAccessToken = jwtService.generateAccessToken(rt.getUser());
-         * 
-         * return new TokenResponse(newAccessToken);
-         * }
-         */
         @PostMapping("/refresh")
         public ResponseEntity<LoginResponse> refresh(
                         @RequestBody RefreshTokenRequest request) {
@@ -125,7 +111,7 @@ public class AuthController {
                 String refreshToken = CookieUtils.getRefreshToken(request);
 
                 if (refreshToken != null) {
-                        refreshTokenService.revoke(refreshToken);
+                        refreshTokenService.revokeAllByRefreshToken(refreshToken);
                 }
 
                 ResponseCookie cookie = ResponseCookie.from("refreshToken", "")
