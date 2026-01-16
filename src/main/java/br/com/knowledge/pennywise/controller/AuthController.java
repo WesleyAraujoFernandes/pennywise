@@ -81,7 +81,7 @@ public class AuthController {
                                                 user.getRole().name()));
         }
 
-        @PostMapping
+        @PostMapping("/logout")
         public ResponseEntity<Void> logout(
                         @RequestBody RefreshTokenRequest request) {
 
