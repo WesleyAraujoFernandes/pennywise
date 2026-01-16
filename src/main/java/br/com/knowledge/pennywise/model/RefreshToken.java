@@ -16,7 +16,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Entity
-@Table(name = "refresh_token")
+@Table(name = "refresh_tokens")
 @Getter
 @Setter
 public class RefreshToken {
@@ -30,4 +30,6 @@ public class RefreshToken {
     private User user;
     @Column(nullable = false)
     private Instant expiryDate;
+    @Column(nullable = false)
+    private boolean revoked = false;
 }

@@ -3,10 +3,17 @@ package br.com.knowledge.pennywise.security;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import br.com.knowledge.pennywise.domain.user.User;
+import br.com.knowledge.pennywise.repository.UserRepository;
 import javax.crypto.SecretKey;
+
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.function.Function;
 
@@ -16,6 +23,12 @@ public class JwtService {
     private static final String SECRET_KEY = "pennywise-secret-key-pennywise-secret-key-123456";
 
     private final SecretKey key = Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
+
+    private final UserRepository userRepository;
+
+    public JwtService(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -46,11 +59,27 @@ public class JwtService {
 
     public String generateToken(UserDetails userDetails) {
 
+        User user = userRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado"));
         return Jwts.builder()
                 .subject(userDetails.getUsername())
+                .claim("role", user.getRole())
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24))
+                .expiration(Date.from(
+                        Instant.now().plus(15, ChronoUnit.MINUTES)))
                 .signWith(key)
                 .compact();
     }
+
+    public String generateAccessToken(User user) {
+        return Jwts.builder()
+                .subject(user.getUsername())
+                .claim("role", user.getRole().name())
+                .issuedAt(new Date())
+                .expiration(Date.from(
+                        Instant.now().plus(15, ChronoUnit.MINUTES)))
+                .signWith(key)
+                .compact();
+    }
+
 }

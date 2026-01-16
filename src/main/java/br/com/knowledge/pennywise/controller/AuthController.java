@@ -2,6 +2,8 @@ package br.com.knowledge.pennywise.controller;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -12,13 +14,15 @@ import org.springframework.web.bind.annotation.RestController;
 
 import br.com.knowledge.pennywise.domain.dto.LoginRequest;
 import br.com.knowledge.pennywise.domain.dto.LoginResponse;
-import br.com.knowledge.pennywise.domain.dto.RefreshTokenRequest;
+import br.com.knowledge.pennywise.domain.dto.TokenResponse;
 import br.com.knowledge.pennywise.domain.user.User;
 import br.com.knowledge.pennywise.model.RefreshToken;
 import br.com.knowledge.pennywise.repository.RefreshTokenRepository;
 import br.com.knowledge.pennywise.repository.UserRepository;
 import br.com.knowledge.pennywise.security.JwtService;
 import br.com.knowledge.pennywise.service.RefreshTokenService;
+import br.com.knowledge.pennywise.utils.CookieUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 @RestController
@@ -28,7 +32,6 @@ public class AuthController {
         private final AuthenticationManager authenticationManager;
         private final JwtService jwtService;
         private final RefreshTokenService refreshTokenService;
-        private final RefreshTokenRepository refreshTokenRepository;
         private final UserRepository userRepository;
 
         public AuthController(AuthenticationManager authenticationManager,
@@ -38,7 +41,6 @@ public class AuthController {
                 this.jwtService = jwtService;
                 this.refreshTokenService = refreshTokenService;
                 this.userRepository = userRepository;
-                this.refreshTokenRepository = refreshTokenRepository;
         }
 
         @PostMapping("/login")
@@ -69,30 +71,53 @@ public class AuthController {
         }
 
         @PostMapping("/refresh")
-        public ResponseEntity<LoginResponse> refresh(@RequestBody RefreshTokenRequest request) {
-                RefreshToken refreshToken = refreshTokenService.validate(request.refreshToken());
-                User user = refreshToken.getUser();
-                String accessToken = jwtService.generateToken(user);
-                return ResponseEntity.ok(
-                                new LoginResponse(
-                                                accessToken,
-                                                refreshToken.getToken(),
-                                                user.getUsername(),
-                                                user.getRole().name()));
+        public TokenResponse refresh(HttpServletRequest request) {
+
+                String refreshToken = CookieUtils.getRefreshToken(request);
+
+                RefreshToken rt = refreshTokenService.validate(refreshToken);
+
+                String newAccessToken = jwtService.generateAccessToken(rt.getUser());
+
+                return new TokenResponse(newAccessToken);
         }
 
         @PostMapping("/logout")
-        public ResponseEntity<Void> logout(
-                        @RequestBody RefreshTokenRequest request) {
+        public ResponseEntity<Void> logout(HttpServletRequest request) {
 
-                RefreshToken refreshToken = refreshTokenRepository
-                                .findByToken(request.refreshToken())
-                                .orElse(null);
+                String refreshToken = CookieUtils.getRefreshToken(request);
 
                 if (refreshToken != null) {
-                        refreshTokenRepository.delete(refreshToken);
+                        refreshTokenService.revoke(refreshToken);
                 }
 
-                return ResponseEntity.noContent().build();
+                ResponseCookie cookie = ResponseCookie.from("refreshToken", "")
+                                .httpOnly(true)
+                                .secure(true)
+                                .path("/auth/refresh")
+                                .maxAge(0)
+                                .build();
+
+                return ResponseEntity.ok()
+                                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                                .build();
         }
+
+        /*
+         * @PostMapping("/logout")
+         * public ResponseEntity<Void> logout(
+         * 
+         * @RequestBody RefreshTokenRequest request) {
+         * 
+         * RefreshToken refreshToken = refreshTokenRepository
+         * .findByToken(request.refreshToken())
+         * .orElse(null);
+         * 
+         * if (refreshToken != null) {
+         * refreshTokenRepository.delete(refreshToken);
+         * }
+         * 
+         * return ResponseEntity.noContent().build();
+         * }
+         */
 }
