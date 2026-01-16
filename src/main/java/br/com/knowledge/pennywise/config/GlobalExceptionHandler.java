@@ -1,5 +1,6 @@
 package br.com.knowledge.pennywise.config;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -7,10 +8,12 @@ import java.util.Map;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import br.com.knowledge.pennywise.domain.dto.ApiError;
 import br.com.knowledge.pennywise.domain.dto.ErrorResponseDTO;
 import br.com.knowledge.pennywise.exception.DespesaDuplicadaException;
 import jakarta.persistence.EntityNotFoundException;
@@ -105,4 +108,13 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.CONFLICT);
     }
 
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ApiError> handleBadCredentials() {
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(new ApiError(
+                        401,
+                        "E-mail ou senha inválidos",
+                        Instant.now()));
+    }
 }

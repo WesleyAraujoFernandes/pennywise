@@ -2,6 +2,7 @@ package br.com.knowledge.pennywise.controller;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
+
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -51,8 +52,11 @@ public class AuthController {
                                 new UsernamePasswordAuthenticationToken(
                                                 request.email(),
                                                 request.password()));
+
                 UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-                User user = userRepository.findByEmail(userDetails.getUsername()).orElseThrow();
+                User user = userRepository.findByEmail(userDetails.getUsername())
+                                .orElseThrow();
+
                 String accessToken = jwtService.generateToken(userDetails);
                 RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
 
