@@ -43,7 +43,7 @@ public class RefreshTokenService {
         RefreshToken token = new RefreshToken();
         token.setToken(UUID.randomUUID().toString());
         token.setUser(user);
-        token.setExpiryDate(Instant.now().plus(30, ChronoUnit.DAYS));
+        token.setExpiryDate(Instant.now().plus(10, ChronoUnit.SECONDS));
 
         return repository.save(token);
     }

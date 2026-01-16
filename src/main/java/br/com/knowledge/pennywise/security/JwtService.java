@@ -66,7 +66,7 @@ public class JwtService {
                 .claim("role", user.getRole())
                 .issuedAt(new Date())
                 .expiration(Date.from(
-                        Instant.now().plus(15, ChronoUnit.DAYS)))
+                        Instant.now().plus(10, ChronoUnit.SECONDS)))
                 .signWith(key)
                 .compact();
     }
@@ -77,7 +77,7 @@ public class JwtService {
                 .claim("role", user.getRole().name())
                 .issuedAt(new Date())
                 .expiration(Date.from(
-                        Instant.now().plus(15, ChronoUnit.DAYS)))
+                        Instant.now().plus(10, ChronoUnit.SECONDS)))
                 .signWith(key)
                 .compact();
     }
